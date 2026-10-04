@@ -1,6 +1,9 @@
-name: Java CI with Gradle
+name: ci
 
-on: [ push ]
+on:
+  push:
+    branches: [viking/forge-1.20.1]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,9 +19,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
       - name: Build artifacts
-        run: ./gradlew build --stacktrace
+        run: ./gradlew build --stacktrace --no-daemon
+      - name: Verify native release
+        run: python3 tools/verify-release.py
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
-          path: build/libs/
+          name: continuity-forge-1.20.1
+          path: build/libs/viking-continuity-forge-1.20.1-*.jar
+          if-no-files-found: error
