@@ -10,8 +10,8 @@ import it.unimi.dsi.fastutil.objects.ObjectList;
 import me.pepperbell.continuity.client.mixin.ReloadableResourceManagerImplAccessor;
 import me.pepperbell.continuity.client.mixinterface.LifecycledResourceManagerImplExtension;
 import me.pepperbell.continuity.client.util.BooleanState;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.resources.ResourceLocation;
 
 public class ResourceRedirectHandler {
 	public static final String SPRITE_PATH_START = "continuity_reserved/";
@@ -58,10 +58,10 @@ public class ResourceRedirectHandler {
 			redirects.add(info);
 			indexMap.put(absolutePath, index);
 		}
-		return SPRITE_PATH_START + toHex(index);
+		return SPRITE_PATH_START + toHexString(index);
 	}
 
-	public Identifier redirect(Identifier id) {
+	public ResourceLocation redirect(ResourceLocation id) {
 		String path = id.getPath();
 		if (!path.startsWith(PATH_START) || !path.endsWith(PATH_END)) {
 			return id;
@@ -83,12 +83,12 @@ public class ResourceRedirectHandler {
 			newPath = info.defaultPath;
 		} else {
 			String suffix = path.substring(HEX_END, length - PATH_END_LENGTH);
-			newPath = info.createPath(suffix);
+			newPath = info.reconstructPath(suffix);
 		}
 
 		BooleanState invalidIdentifierState = InvalidIdentifierStateHolder.get();
 		invalidIdentifierState.enable();
-		Identifier newId = id.withPath(newPath);
+		ResourceLocation newId = id.withPath(newPath);
 		invalidIdentifierState.disable();
 
 		return newId;
@@ -112,7 +112,7 @@ public class ResourceRedirectHandler {
 		return i;
 	}
 
-	public static String toHex(int i) {
+	public static String toHexString(int i) {
 		int charPos = HEX_LENGTH;
 		do {
 			HEX_BUFFER[--charPos] = HEX_DIGITS[i & 15];
@@ -128,7 +128,7 @@ public class ResourceRedirectHandler {
 			this.defaultPath = defaultPath;
 		}
 
-		public abstract String createPath(String suffix);
+		public abstract String reconstructPath(String suffix);
 
 		public static RedirectInfo of(String path) {
 			int extensionIndex = FilenameUtils.indexOfExtension(path);
@@ -137,14 +137,14 @@ public class ResourceRedirectHandler {
 				String pathEnd = path.substring(extensionIndex);
 				return new RedirectInfo(path) {
 					@Override
-					public String createPath(String suffix) {
+					public String reconstructPath(String suffix) {
 						return pathStart + suffix + pathEnd;
 					}
 				};
 			} else {
 				return new RedirectInfo(path) {
 					@Override
-					public String createPath(String suffix) {
+					public String reconstructPath(String suffix) {
 						return path + suffix;
 					}
 				};

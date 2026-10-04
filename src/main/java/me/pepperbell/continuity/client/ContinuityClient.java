@@ -41,31 +41,23 @@ import me.pepperbell.continuity.client.resource.ModelWrappingHandler;
 import me.pepperbell.continuity.client.util.RenderUtil;
 import me.pepperbell.continuity.client.util.biome.BiomeHolderManager;
 import me.pepperbell.continuity.impl.client.ProcessingDataKeyRegistryImpl;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
-public class ContinuityClient implements ClientModInitializer {
+public class ContinuityClient {
 	public static final String ID = "continuity";
 	public static final String NAME = "Continuity";
 	public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
 
-	@Override
 	public void onInitializeClient() {
-		ProcessingDataKeyRegistryImpl.INSTANCE.init();
+
 		BiomeHolderManager.init();
 		ProcessingDataKeys.init();
 		ModelWrappingHandler.init();
-		RenderUtil.ReloadListener.init();
-		CustomBlockLayers.ReloadListener.init();
 
-		FabricLoader.getInstance().getModContainer(ID).ifPresent(container -> {
-			ResourceManagerHelper.registerBuiltinResourcePack(asId("default"), container, Text.translatable("resourcePack.continuity.default.name"), ResourcePackActivationType.NORMAL);
-			ResourceManagerHelper.registerBuiltinResourcePack(asId("glass_pane_culling_fix"), container, Text.translatable("resourcePack.continuity.glass_pane_culling_fix.name"), ResourcePackActivationType.NORMAL);
-		});
+
+
+
 
 		CtmLoaderRegistry registry = CtmLoaderRegistry.get();
 		CtmLoader<?> loader;
@@ -217,18 +209,15 @@ public class ContinuityClient implements ClientModInitializer {
 
 	private static <T extends CtmProperties> CtmLoader<T> createLoader(CtmProperties.Factory<T> propertiesFactory, QuadProcessor.Factory<T> processorFactory, CachingPredicates.Factory<T> predicatesFactory) {
 		return new CtmLoader<>() {
-			@Override
-			public CtmProperties.Factory<T> getPropertiesFactory() {
+					public CtmProperties.Factory<T> getPropertiesFactory() {
 				return propertiesFactory;
 			}
 
-			@Override
-			public QuadProcessor.Factory<T> getProcessorFactory() {
+					public QuadProcessor.Factory<T> getProcessorFactory() {
 				return processorFactory;
 			}
 
-			@Override
-			public CachingPredicates.Factory<T> getPredicatesFactory() {
+					public CachingPredicates.Factory<T> getPredicatesFactory() {
 				return predicatesFactory;
 			}
 		};
@@ -267,7 +256,7 @@ public class ContinuityClient implements ClientModInitializer {
 		};
 	}
 
-	public static Identifier asId(String path) {
-		return new Identifier(ID, path);
+	public static ResourceLocation asId(String path) {
+		return new ResourceLocation(ID, path);
 	}
 }

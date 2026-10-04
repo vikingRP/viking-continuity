@@ -6,24 +6,24 @@ import me.pepperbell.continuity.api.client.EmissiveSpriteApi;
 import me.pepperbell.continuity.client.config.ContinuityConfig;
 import me.pepperbell.continuity.client.util.QuadUtil;
 import me.pepperbell.continuity.client.util.RenderUtil;
-import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
-import net.fabricmc.fabric.api.renderer.v1.material.MaterialFinder;
-import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
-import net.fabricmc.fabric.api.renderer.v1.mesh.MeshBuilder;
-import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
-import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
-import net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel;
-import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
-import net.fabricmc.fabric.api.util.TriState;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderLayers;
-import net.minecraft.client.render.model.BakedModel;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.BlockRenderView;
+import me.pepperbell.continuity.client.render.BlendMode;
+import me.pepperbell.continuity.client.render.MaterialFinder;
+import me.pepperbell.continuity.client.render.RenderMaterial;
+import me.pepperbell.continuity.client.render.MeshBuilder;
+import me.pepperbell.continuity.client.render.MutableQuadView;
+import me.pepperbell.continuity.client.render.QuadEmitter;
+import me.pepperbell.continuity.client.render.ForwardingBakedModel;
+import me.pepperbell.continuity.client.render.RenderContext;
+import me.pepperbell.continuity.client.render.TriState;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockAndTintGetter;
 
 public class EmissiveBakedModel extends ForwardingBakedModel {
 	protected static final RenderMaterial[] EMISSIVE_MATERIALS;
@@ -46,8 +46,24 @@ public class EmissiveBakedModel extends ForwardingBakedModel {
 		this.wrapped = wrapped;
 	}
 
+	private final net.minecraft.client.renderer.block.model.ItemOverrides nativeOverrides = new net.minecraft.client.renderer.block.model.ItemOverrides() {
+		private final java.util.Map<BakedModel, BakedModel> models = new java.util.IdentityHashMap<>();
+		@Override
+		public BakedModel resolve(BakedModel original, ItemStack stack, net.minecraft.client.multiplayer.ClientLevel level, net.minecraft.world.entity.LivingEntity entity, int seed) {
+			BakedModel model = wrapped.getOverrides().resolve(wrapped, stack, level, entity, seed);
+			if (model == null || model == wrapped) return EmissiveBakedModel.this;
+			if (model instanceof EmissiveBakedModel || model.isCustomRenderer()) return model;
+			return models.computeIfAbsent(model, EmissiveBakedModel::new);
+		}
+	};
+
 	@Override
-	public void emitBlockQuads(BlockRenderView blockView, BlockState state, BlockPos pos, Supplier<Random> randomSupplier, RenderContext context) {
+	public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
+		return nativeOverrides;
+	}
+
+	@Override
+	public void emitBlockQuads(BlockAndTintGetter blockView, BlockState state, BlockPos pos, Supplier<RandomSource> randomSupplier, RenderContext context) {
 		if (!ContinuityConfig.INSTANCE.emissiveTextures.get()) {
 			super.emitBlockQuads(blockView, state, pos, randomSupplier, context);
 			return;
@@ -79,7 +95,7 @@ public class EmissiveBakedModel extends ForwardingBakedModel {
 	}
 
 	@Override
-	public void emitItemQuads(ItemStack stack, Supplier<Random> randomSupplier, RenderContext context) {
+	public void emitItemQuads(ItemStack stack, Supplier<RandomSource> randomSupplier, RenderContext context) {
 		if (!ContinuityConfig.INSTANCE.emissiveTextures.get()) {
 			super.emitItemQuads(stack, randomSupplier, context);
 			return;
@@ -135,8 +151,8 @@ public class EmissiveBakedModel extends ForwardingBakedModel {
 				return false;
 			}
 
-			Sprite sprite = RenderUtil.getSpriteFinder().find(quad);
-			Sprite emissiveSprite = EmissiveSpriteApi.get().getEmissiveSprite(sprite);
+			TextureAtlasSprite sprite = RenderUtil.getSpriteFinder().find(quad);
+			TextureAtlasSprite emissiveSprite = EmissiveSpriteApi.get().getEmissiveSprite(sprite);
 			if (emissiveSprite != null) {
 				emitter.copyFrom(quad);
 
@@ -144,7 +160,7 @@ public class EmissiveBakedModel extends ForwardingBakedModel {
 				RenderMaterial emissiveMaterial;
 				if (blendMode == BlendMode.DEFAULT) {
 					if (calculateDefaultLayer) {
-						isDefaultLayerSolid = RenderLayers.getBlockLayer(state) == RenderLayer.getSolid();
+						isDefaultLayerSolid = ItemBlockRenderTypes.getChunkRenderType(state) == RenderType.solid();
 						calculateDefaultLayer = false;
 					}
 
@@ -205,8 +221,8 @@ public class EmissiveBakedModel extends ForwardingBakedModel {
 
 		@Override
 		public boolean transform(MutableQuadView quad) {
-			Sprite sprite = RenderUtil.getSpriteFinder().find(quad);
-			Sprite emissiveSprite = EmissiveSpriteApi.get().getEmissiveSprite(sprite);
+			TextureAtlasSprite sprite = RenderUtil.getSpriteFinder().find(quad);
+			TextureAtlasSprite emissiveSprite = EmissiveSpriteApi.get().getEmissiveSprite(sprite);
 			if (emissiveSprite != null) {
 				emitter.copyFrom(quad);
 				emitter.material(DEFAULT_EMISSIVE_MATERIAL);

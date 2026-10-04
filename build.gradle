@@ -1,96 +1,62 @@
-plugins {
-	id 'fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+buildscript {
+    repositories { mavenCentral(); maven { url = 'https://repo.spongepowered.org/repository/maven-public/' } }
+    dependencies { classpath 'org.spongepowered:mixingradle:0.7.38' }
 }
-
-version = project.mod_version + '+' + project.mod_minecraft_version + getExtraBuildMetadata()
-group = project.maven_group
-
-base {
-	archivesName = project.archives_base_name
+plugins { id 'java'; id 'net.minecraftforge.gradle' version '6.0.53' }
+apply plugin: 'org.spongepowered.mixin'
+group = 'me.pepperbell'
+version = mod_version
+base { archivesName = 'viking-continuity-forge-1.20.1' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java.withSourcesJar()
+mixin { add sourceSets.main, 'continuity.refmap.json'; config 'continuity.mixins.json' }
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            jvmArgs '-Xmx4G'
+            property 'forge.logging.console.level', 'info'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            mods { continuity { source sourceSets.main } }
+        }
+        client {}
+        server { args '--nogui' }
+    }
 }
-
-static String getExtraBuildMetadata() {
-	String buildNumber = System.getenv('GITHUB_RUN_NUMBER')
-	if (buildNumber != null) {
-		return ".build.${buildNumber}"
-	}
-	return ''
-}
-
-repositories {
-	maven {
-		name 'TerraformersMC'
-		url 'https://maven.terraformersmc.com'
-	}
-	maven {
-		name 'Modrinth'
-		url 'https://api.modrinth.com/maven'
-	}
-	maven {
-		name 'Shedaniel'
-		url 'https://maven.shedaniel.me'
-	}
-}
-
+repositories { mavenCentral() }
 dependencies {
-	// To change the versions see the gradle.properties file
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-	// Fabric API
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-
-	modImplementation("com.terraformersmc:modmenu:${modmenu_version}") {
-		exclude group: 'net.fabricmc.fabric-api'
-	}
-
-	modCompileOnly "maven.modrinth:canvas:fabric-${canvas_version}"
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    compileOnly 'org.jetbrains:annotations:24.0.1'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
-
-processResources {
-	inputs.property 'version', project.version
-
-	filesMatching('fabric.mod.json') {
-		expand 'version': project.version
-	}
-}
-
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 17
+    options.encoding = 'UTF-8'
+    options.incremental = false
+    options.compilerArgs += ['-Xmaxerrs', '500']
 }
-
-java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_17
-	targetCompatibility = JavaVersion.VERSION_17
+tasks.named('compileJava') {
+    outputs.file layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json')
+    outputs.file layout.buildDirectory.file('tmp/compileJava/compileJava-mappings.tsrg')
 }
-
-jar {
-	from('LICENSE') {
-		rename { "${it}_${project.base.archivesName.get()}" }
-	}
+tasks.withType(Jar).configureEach {
+    from('LICENSE')
+    manifest { attributes 'MixinConfigs': 'continuity.mixins.json', 'Implementation-Version': mod_version }
+    from(layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json')) { rename { 'continuity.refmap.json' } }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
-
-// configure the maven publication
-publishing {
-	publications {
-		create('mavenJava', MavenPublication) {
-			artifactId = project.archives_base_name
-			from components.java
-		}
-	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
-	}
+tasks.named('jar') { finalizedBy 'reobfJar' }
+tasks.named('processResources') {
+    dependsOn 'compileJava'
+    from(layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json')) { rename { 'continuity.refmap.json' } }
 }
+tasks.register('devJar', Jar) { dependsOn 'classes'; archiveClassifier = 'dev'; from sourceSets.main.output }
+tasks.register('deployJarToConsumers') {
+    dependsOn 'devJar'
+    doLast {
+        def target = file(providers.gradleProperty('consumerDir').orNull ?: '../viking-laomod')
+        if (target.exists()) copy { from tasks.named('devJar', Jar).get().archiveFile; into new File(target, 'run/mods') }
+    }
+}
+tasks.named('build') { finalizedBy 'deployJarToConsumers' }

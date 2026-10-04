@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "me.pepperbell.continuity.client.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "continuity.refmap.json",
   "client": [
     "AtlasLoaderMixin",
     "BakedModelManagerMixin",

@@ -1,9 +1,2 @@
-pluginManagement {
-	repositories {
-		maven {
-			name = 'Fabric'
-			url = 'https://maven.fabricmc.net/'
-		}
-		gradlePluginPortal()
-	}
-}
+pluginManagement { repositories { gradlePluginPortal(); maven { url = 'https://maven.minecraftforge.net/' } } }
+rootProject.name = 'viking-continuity'

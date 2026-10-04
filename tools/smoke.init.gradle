@@ -1,0 +1,34 @@
+// Runs the native mod alone. The smoke classes are never included in release jars.
+gradle.beforeProject { project ->
+    if (project.path == ':') project.afterEvaluate {
+        project.sourceSets.create('smoke') {
+            java.srcDir project.file('tools/smoke/java')
+            if (project.hasProperty('productionSmoke')) {
+                java.srcDir project.file('tools/production-smoke/java')
+                resources.srcDir project.file('tools/production-smoke/resources')
+            }
+            compileClasspath += project.sourceSets.main.output + project.sourceSets.main.compileClasspath
+            runtimeClasspath += output + compileClasspath
+        }
+        project.minecraft.runs.configureEach {
+            workingDirectory project.file('build/smoke-run')
+            mods { continuity { source project.sourceSets.smoke } }
+        }
+        project.tasks.matching { it.name == 'runClient' }.configureEach {
+            dependsOn 'smokeClasses'
+            doFirst {
+                def dir = project.file('build/smoke-run'); dir.mkdirs()
+                new File(dir, 'options.txt').text = 'resourcePacks:["vanilla","mod_resources","continuity/default","file/continuity-smoke"]\n'
+            }
+        }
+        if (project.hasProperty('productionSmoke')) {
+            project.tasks.register('productionSmokeJar', Jar) {
+                dependsOn 'smokeClasses'
+                archiveBaseName = 'continuity-native-smoke'
+                from project.sourceSets.smoke.output
+                doFirst { manifest.attributes.remove('MixinConfigs') }
+            }
+            project.reobf { productionSmokeJar {} }
+        }
+    }
+}

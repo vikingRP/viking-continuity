@@ -14,5 +14,5 @@ public interface CtmLoaderRegistry {
 	void registerLoader(String method, CtmLoader<?> loader);
 
 	@Nullable
-	CtmLoader<?> getLoader(String method);
+	CtmLoader<?> create(String method);
 }

@@ -20,13 +20,12 @@ import com.google.gson.JsonParser;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectBidirectionalIterator;
-import net.fabricmc.loader.api.FabricLoader;
 
 public class ContinuityConfig {
 	protected static final Logger LOGGER = LoggerFactory.getLogger("Continuity Config");
 	protected static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-	public static final ContinuityConfig INSTANCE = new ContinuityConfig(FabricLoader.getInstance().getConfigDir().resolve("continuity.json").toFile());
+	public static final ContinuityConfig INSTANCE = new ContinuityConfig(net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("continuity.json").toFile());
 	static {
 		INSTANCE.load();
 	}
@@ -102,7 +101,7 @@ public class ContinuityConfig {
 	}
 
 	@Nullable
-	public Option<?> getOption(String key) {
+	public Option<?> parseArgument(String key) {
 		return optionMap.get(key);
 	}
 

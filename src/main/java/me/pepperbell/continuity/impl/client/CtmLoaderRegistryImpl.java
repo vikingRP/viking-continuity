@@ -20,7 +20,7 @@ public final class CtmLoaderRegistryImpl implements CtmLoaderRegistry {
 
 	@Override
 	@Nullable
-	public CtmLoader<?> getLoader(String method) {
+	public CtmLoader<?> create(String method) {
 		return loaderMap.get(method);
 	}
 }
