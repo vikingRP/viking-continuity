@@ -25,6 +25,8 @@ $env:JAVA_HOME='C:/chemin/vers/jdk-17'
 
 Depuis le workspace : `./gradlew.bat :viking-continuity:build`.
 
+La compilation sur GitHub et la publication de l’artefact `continuity-forge-1.20.1` sont gérées uniquement par [le workflow ci.yml de viking-rp](https://github.com/vikingRP/viking-rp/blob/main/.github/workflows/ci.yml). Ce dépôt ne possède pas de workflow de compilation autonome.
+
 Le JAR de production est `build/libs/viking-continuity-forge-1.20.1-3.0.1-viking.1.jar`. Le copier dans `mods/` du client, puis activer le pack de textures voulu. Le fichier `-sources.jar` contient les sources. Le fichier `-dev.jar` est réservé aux runs de développement ; le build le dépose automatiquement dans `../viking-laomod/run/mods/`.
 
 Le profil complet `viking-conquest -PvisualDependencies` utilise ce `devJar` natif. Construire Continuity avant ce lancement. Les anciens téléchargements Continuity de Conquest restent des archives et sont exclus du profil Gradle.
